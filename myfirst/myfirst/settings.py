@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "blog",
 ]
 
 MIDDLEWARE = [
@@ -50,11 +51,14 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'myfirst.urls'
+# X:\Django\myfirst\myfirst\templates
+# X:\Django\myfirst\manage.py
+TEMPLATES_DIRS= BASE_DIR / 'myfirst' / 'templates'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [TEMPLATES_DIRS],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
