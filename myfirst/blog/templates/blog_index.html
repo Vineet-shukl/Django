@@ -2,12 +2,412 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Blog Template</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Blog</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles for a more vibrant and animated look */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e0e0e0; }
+        ::-webkit-scrollbar-thumb { background: #a8a8a8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #888; }
+
+        /* Gradient text for the header */
+        .gradient-text {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Glassmorphism effect for the form */
+        #post-form {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: box-shadow 0.3s ease-in-out;
+        }
+        #post-form:focus-within {
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Button styling and animation */
+        .animated-button {
+            background-image: linear-gradient(to right, #6366f1 0%, #a855f7 51%, #6366f1 100%);
+            background-size: 200% auto;
+            transition: background-position 0.5s;
+        }
+        .animated-button:hover {
+            background-position: right center;
+        }
+        
+        /* Animation for new posts fading in */
+        .post-enter {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+        .post-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Scroll to top button styling */
+        #scroll-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            opacity: 0;
+            transform: translateY(100px);
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 1000;
+        }
+        #scroll-to-top.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
 </head>
-<body>
-    <h1>Welcome to My Blog</h1>
-    {% block content %}
-    <!-- Blog content will go here -->
-    {% endblock %}
+<body class="text-gray-800">
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <!-- Header -->
+        <header class="text-center mb-8 md:mb-12">
+            <h1 class="text-5xl md:text-6xl font-bold gradient-text">My Interactive Blog</h1>
+            <p class="text-gray-700 mt-3 text-lg">Create posts and engage with comments in real-time.</p>
+            <div class="mt-4 text-sm text-gray-600">Your User ID: <span id="userId" class="font-mono bg-white/50 p-1 rounded"></span></div>
+        </header>
+
+        <!-- Post Creation Form -->
+        <section class="mb-10">
+            <form id="post-form" class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Create a New Post</h2>
+                <div class="space-y-4">
+                    <input type="text" id="post-title" placeholder="Post Title" class="w-full p-3 bg-white/70 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    <input type="text" id="post-author" placeholder="Your Name" class="w-full p-3 bg-white/70 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    <textarea id="post-content" placeholder="Write your blog post here..." rows="5" class="w-full p-3 bg-white/70 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required></textarea>
+                </div>
+                <button type="submit" id="submit-post-btn" class="mt-4 w-full animated-button text-white font-semibold py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 ease-in-out disabled:opacity-50">
+                    Publish Post
+                </button>
+            </form>
+        </section>
+
+        <!-- Blog Posts Section -->
+        <section>
+            <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">Latest Posts</h2>
+            <div id="posts-container" class="space-y-8">
+                <!-- Posts will be dynamically inserted here -->
+                 <p id="loading-state" class="text-center text-gray-500">Loading posts...</p>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Template for a single blog post -->
+    <template id="post-template">
+        <article class="bg-white p-6 rounded-xl shadow-lg transition-transform duration-300 hover:scale-[1.02] hover:shadow-2xl">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900 post-title"></h3>
+                    <p class="text-sm text-gray-500 mt-1">
+                        By <span class="font-semibold post-author"></span> on <span class="post-date"></span>
+                    </p>
+                </div>
+                <div class="text-xs text-gray-400 font-mono post-user-id" title="Post creator's User ID"></div>
+            </div>
+            <p class="text-gray-700 mt-4 whitespace-pre-wrap post-content"></p>
+            
+            <!-- Comments Section -->
+            <div class="mt-6 border-t border-gray-200 pt-4">
+                <h4 class="text-lg font-semibold mb-3">Comments</h4>
+                <div class="comments-list space-y-3 mb-4">
+                    <!-- Comments will be dynamically added here -->
+                </div>
+                <form class="comment-form flex gap-2">
+                    <input type="text" placeholder="Add a comment..." class="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400" required>
+                    <button type="submit" class="bg-gray-700 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-800 transition duration-300">Post</button>
+                </form>
+            </div>
+        </article>
+    </template>
+    
+    <!-- Custom Message Modal -->
+    <div id="message-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+            <p id="modal-message" class="text-lg"></p>
+            <button id="modal-close-btn" class="mt-4 bg-indigo-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-indigo-700">OK</button>
+        </div>
+    </div>
+    
+    <!-- Scroll to Top Button -->
+    <button id="scroll-to-top" class="bg-indigo-600 text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center hover:bg-indigo-700 transition">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase Core and Services
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, arrayUnion, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-interactive-blog';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // --- App Initialization ---
+        let app, auth, db, userId, postsCollection;
+
+        // --- DOM Element References ---
+        const postForm = document.getElementById('post-form');
+        const postTitleInput = document.getElementById('post-title');
+        const postAuthorInput = document.getElementById('post-author');
+        const postContentInput = document.getElementById('post-content');
+        const submitPostBtn = document.getElementById('submit-post-btn');
+        const postsContainer = document.getElementById('posts-container');
+        const postTemplate = document.getElementById('post-template');
+        const loadingState = document.getElementById('loading-state');
+        const userIdSpan = document.getElementById('userId');
+        const messageModal = document.getElementById('message-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const scrollToTopBtn = document.getElementById('scroll-to-top');
+
+        // --- Main Application Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                setLogLevel('debug'); 
+
+                postsCollection = collection(db, `artifacts/${appId}/public/data/posts`);
+
+                setupAuthentication();
+                setupEventListeners();
+                setupScrollAnimations();
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                loadingState.textContent = "Error: Could not connect to the database.";
+            }
+        });
+
+        /**
+         * Sets up Firebase authentication.
+         */
+        function setupAuthentication() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    userIdSpan.textContent = userId;
+                    listenForPosts();
+                } else {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Authentication failed:", error);
+                        loadingState.textContent = "Error: Authentication failed.";
+                    }
+                }
+            });
+        }
+        
+        /**
+         * Sets up general event listeners.
+         */
+        function setupEventListeners() {
+            postForm.addEventListener('submit', handlePostSubmit);
+            modalCloseBtn.addEventListener('click', () => messageModal.classList.add('hidden'));
+        }
+        
+        /**
+         * Sets up scroll-related animations and interactions.
+         */
+        function setupScrollAnimations() {
+            // Show/hide scroll-to-top button
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    scrollToTopBtn.classList.add('visible');
+                } else {
+                    scrollToTopBtn.classList.remove('visible');
+                }
+            });
+
+            // Handle click on scroll-to-top button
+            scrollToTopBtn.addEventListener('click', () => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        }
+
+        /**
+         * Handles the submission of the new post form.
+         */
+        async function handlePostSubmit(e) {
+            e.preventDefault();
+            if (!userId) {
+                showMessage("You must be authenticated to post.");
+                return;
+            }
+
+            const title = postTitleInput.value.trim();
+            const author = postAuthorInput.value.trim();
+            const content = postContentInput.value.trim();
+
+            if (!title || !author || !content) {
+                showMessage("Please fill out all fields.");
+                return;
+            }
+
+            submitPostBtn.disabled = true;
+            submitPostBtn.textContent = 'Publishing...';
+
+            try {
+                await addDoc(postsCollection, {
+                    title, author, content, userId,
+                    createdAt: serverTimestamp(),
+                    comments: []
+                });
+                postForm.reset();
+                showMessage("Blog post published successfully!");
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showMessage("Error: Could not publish post.");
+            } finally {
+                submitPostBtn.disabled = false;
+                submitPostBtn.textContent = 'Publish Post';
+            }
+        }
+
+        /**
+         * Listens for real-time updates to posts.
+         */
+        function listenForPosts() {
+            onSnapshot(postsCollection, (snapshot) => {
+                if (snapshot.empty) {
+                    loadingState.textContent = "No posts yet. Be the first to create one!";
+                } else {
+                    loadingState.style.display = 'none';
+                }
+                
+                // Use document changes to animate only new posts
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const newPostData = change.doc.data();
+                        // Prepend new posts instead of re-rendering everything
+                        renderPost(change.doc.id, newPostData, true);
+                    }
+                    // Note: For a full implementation, you'd also handle "modified" and "removed"
+                });
+
+            }, (error) => {
+                console.error("Error fetching posts:", error);
+                loadingState.textContent = "Error loading posts.";
+            });
+        }
+
+        /**
+         * Renders a single post.
+         * @param {string} id - The document ID of the post.
+         * @param {object} data - The data object for the post.
+         * @param {boolean} isNew - Whether the post is new and should be animated.
+         */
+        function renderPost(id, data, isNew = false) {
+             // Avoid re-rendering existing posts if they are already on the page
+            if (document.querySelector(`[data-id="${id}"]`)) return;
+
+            const postElementFragment = document.importNode(postTemplate.content, true);
+            const postElement = postElementFragment.querySelector('article');
+            postElement.dataset.id = id;
+            
+            postElement.querySelector('.post-title').textContent = data.title;
+            postElement.querySelector('.post-author').textContent = data.author;
+            postElement.querySelector('.post-content').textContent = data.content;
+            postElement.querySelector('.post-user-id').textContent = `...${data.userId.slice(-6)}`;
+            
+            const date = data.createdAt ? data.createdAt.toDate() : new Date();
+            postElement.querySelector('.post-date').textContent = date.toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            const commentsList = postElement.querySelector('.comments-list');
+            if (data.comments && data.comments.length > 0) {
+                data.comments.forEach(comment => {
+                    const li = document.createElement('li');
+                    li.className = 'text-sm bg-gray-100 p-2 rounded-md';
+                    li.innerHTML = `<span class="font-semibold">${comment.authorId.slice(0, 8)}...</span>: ${comment.text}`;
+                    commentsList.appendChild(li);
+                });
+            } else {
+                 const noComments = document.createElement('p');
+                 noComments.textContent = 'No comments yet.';
+                 noComments.className = 'text-sm text-gray-500 italic';
+                 commentsList.appendChild(noComments);
+            }
+
+            const commentForm = postElement.querySelector('.comment-form');
+            commentForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const commentInput = commentForm.querySelector('input');
+                const commentText = commentInput.value.trim();
+                
+                if (commentText) {
+                    const newComment = { authorId: userId, text: commentText, createdAt: new Date() };
+                    try {
+                        const postRef = doc(db, `artifacts/${appId}/public/data/posts`, id);
+                        await updateDoc(postRef, { comments: arrayUnion(newComment) });
+                        commentInput.value = '';
+                    } catch (error) {
+                        console.error("Error adding comment: ", error);
+                        showMessage("Could not add comment.");
+                    }
+                }
+            });
+            
+            // Prepend to show newest first and apply animation
+            postsContainer.prepend(postElementFragment);
+            
+            if (isNew) {
+                const newPostDom = document.querySelector(`[data-id="${id}"]`);
+                newPostDom.classList.add('post-enter');
+                requestAnimationFrame(() => {
+                    newPostDom.classList.add('post-enter-active');
+                });
+            }
+        }
+        
+        /**
+         * Displays a message in a modal.
+         */
+        function showMessage(message) {
+            modalMessage.textContent = message;
+            messageModal.classList.remove('hidden');
+        }
+
+    </script>
 </body>
 </html>
