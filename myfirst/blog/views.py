@@ -3,7 +3,10 @@ from .forms import PostForm
 from django.http import HttpResponse
 from blog.models import Posts
 from .models import Post # Make sure Post is imported
-from .forms import PostForm
+from django.contrib.auth import login
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.decorators import login_required 
+
 def blog_index(request):
     return render(request=request, template_name="blog_index.html")
 def get_post(request):
@@ -18,24 +21,28 @@ def home(request):
     posts = Post.objects.all().order_by('-created_at') # Get all posts, newest first
     return render(request, 'home.html', {'posts': posts})
 # Create your views here.
+@login_required
 def content_post(request):
-    # If the form is being submitted (a POST request)
     if request.method == 'POST':
         form = PostForm(request.POST)
-        # Check if the submitted data is valid
         if form.is_valid():
-            form.save() # Save the new Post object to the database
-            return redirect('home') # Redirect to a success page or the homepage
-    # If it's a GET request (just loading the page)
+            # Create a post object but DON'T save it to the database yet
+            post = form.save(commit=False)
+            
+            # Assign the current logged-in user to the author field
+            post.author = request.user
+            
+            # Now, save the post to the database with the author included
+            post.save()
+            
+            return redirect('home')
     else:
-        form = PostForm() # Create a new, blank form instance
-
-    # Render the template with the form
+        form = PostForm()
     return render(request, 'new_post.html', {'form': form})
 
 
 
-
+@login_required
 def post_update(request, pk):
     """
     View to handle editing an existing post.
@@ -54,7 +61,7 @@ def post_update(request, pk):
     # Pass the form to a template
     return render(request, 'post_update.html', {'form': form})
 
-
+@login_required
 def post_delete(request, pk):
     """
     View to handle deleting a post.
@@ -66,3 +73,18 @@ def post_delete(request, pk):
     # If it's a GET request, you might show a confirmation page,
     # but we'll handle confirmation in the template for simplicity.
     return redirect('home') # Or render a confirmation template
+
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user) # Log the user in immediately
+            return redirect('home')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
+
+def post_detail(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    return render(request, 'post_detail.html', {'post': post})
