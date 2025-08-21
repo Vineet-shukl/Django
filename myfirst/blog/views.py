@@ -52,7 +52,7 @@ def post_update(request, pk):
         form = PostForm(instance=post)
     
     # Pass the form to a template
-    return render(request, 'blog/post_update.html', {'form': form})
+    return render(request, 'post_update.html', {'form': form})
 
 
 def post_delete(request, pk):
